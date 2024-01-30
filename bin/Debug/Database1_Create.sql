@@ -36,35 +36,29 @@ IF N'$(__IsSqlCmdEnabled)' NOT LIKE N'True'
 
 
 GO
-/* Please run the below section of statements against 'master' database. */
+USE [master];
+
+
+GO
+
+IF (DB_ID(N'$(DatabaseName)') IS NOT NULL) 
+BEGIN
+    ALTER DATABASE [$(DatabaseName)]
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE [$(DatabaseName)];
+END
+
+GO
 PRINT N'Creating database $(DatabaseName)...'
 GO
 CREATE DATABASE [$(DatabaseName)] COLLATE SQL_Latin1_General_CP1_CI_AS
 GO
-DECLARE  @job_state INT = 0;
-DECLARE  @index INT = 0;
-DECLARE @EscapedDBNameLiteral sysname = N'$(DatabaseName)'
-WAITFOR DELAY '00:00:30';
-WHILE (@index < 60) 
-BEGIN
-	SET @job_state = ISNULL( (SELECT SUM (result)  FROM (
-		SELECT TOP 1 [state] AS result
-		FROM sys.dm_operation_status WHERE resource_type = 0 
-		AND operation = 'CREATE DATABASE' AND major_resource_id = @EscapedDBNameLiteral AND [state] = 2
-		ORDER BY start_time DESC
-		) r), -1);
+USE [$(DatabaseName)];
 
-	SET @index = @index + 1;
 
-	IF @job_state = 0 /* pending */ OR @job_state = 1 /* in progress */ OR @job_state = -1 /* job not found */ OR (SELECT [state] FROM sys.databases WHERE name = @EscapedDBNameLiteral) <> 0
-		WAITFOR DELAY '00:00:30';
-	ELSE 
-    	BREAK;
-END
 GO
-/* Please run the below section of statements against the database name that the above [$(DatabaseName)] variable is assigned to. */
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
@@ -76,6 +70,8 @@ IF EXISTS (SELECT 1
                 NUMERIC_ROUNDABORT ON,
                 QUOTED_IDENTIFIER ON,
                 ANSI_NULL_DEFAULT OFF,
+                CURSOR_DEFAULT GLOBAL,
+                RECOVERY SIMPLE,
                 CURSOR_CLOSE_ON_COMMIT OFF,
                 AUTO_CREATE_STATISTICS ON,
                 AUTO_SHRINK OFF,
@@ -87,7 +83,7 @@ IF EXISTS (SELECT 1
 
 GO
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
@@ -97,30 +93,102 @@ IF EXISTS (SELECT 1
 
 GO
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
+           WHERE  [name] = N'$(DatabaseName)')
+    BEGIN
+        ALTER DATABASE [$(DatabaseName)]
+            SET READ_COMMITTED_SNAPSHOT OFF 
+            WITH ROLLBACK IMMEDIATE;
+    END
+
+
+GO
+IF EXISTS (SELECT 1
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
             SET AUTO_UPDATE_STATISTICS_ASYNC OFF,
-                DATE_CORRELATION_OPTIMIZATION OFF 
+                PAGE_VERIFY CHECKSUM,
+                DATE_CORRELATION_OPTIMIZATION OFF,
+                ENABLE_BROKER,
+                PARAMETERIZATION SIMPLE,
+                SUPPLEMENTAL_LOGGING OFF 
             WITH ROLLBACK IMMEDIATE;
     END
 
 
 GO
+IF IS_SRVROLEMEMBER(N'sysadmin') = 1
+    BEGIN
+        IF EXISTS (SELECT 1
+                   FROM   [master].[dbo].[sysdatabases]
+                   WHERE  [name] = N'$(DatabaseName)')
+            BEGIN
+                EXECUTE sp_executesql N'ALTER DATABASE [$(DatabaseName)]
+    SET TRUSTWORTHY OFF,
+        DB_CHAINING OFF 
+    WITH ROLLBACK IMMEDIATE';
+            END
+    END
+ELSE
+    BEGIN
+        PRINT N'The database settings cannot be modified. You must be a SysAdmin to apply these settings.';
+    END
+
+
+GO
+IF IS_SRVROLEMEMBER(N'sysadmin') = 1
+    BEGIN
+        IF EXISTS (SELECT 1
+                   FROM   [master].[dbo].[sysdatabases]
+                   WHERE  [name] = N'$(DatabaseName)')
+            BEGIN
+                EXECUTE sp_executesql N'ALTER DATABASE [$(DatabaseName)]
+    SET HONOR_BROKER_PRIORITY OFF 
+    WITH ROLLBACK IMMEDIATE';
+            END
+    END
+ELSE
+    BEGIN
+        PRINT N'The database settings cannot be modified. You must be a SysAdmin to apply these settings.';
+    END
+
+
+GO
+ALTER DATABASE [$(DatabaseName)]
+    SET TARGET_RECOVERY_TIME = 60 SECONDS 
+    WITH ROLLBACK IMMEDIATE;
+
+
+GO
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
-            SET AUTO_CREATE_STATISTICS ON(INCREMENTAL = OFF) 
+            SET FILESTREAM(NON_TRANSACTED_ACCESS = OFF),
+                CONTAINMENT = NONE 
             WITH ROLLBACK IMMEDIATE;
     END
 
 
 GO
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
+           WHERE  [name] = N'$(DatabaseName)')
+    BEGIN
+        ALTER DATABASE [$(DatabaseName)]
+            SET AUTO_CREATE_STATISTICS ON(INCREMENTAL = OFF),
+                MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT = OFF,
+                DELAYED_DURABILITY = DISABLED 
+            WITH ROLLBACK IMMEDIATE;
+    END
+
+
+GO
+IF EXISTS (SELECT 1
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
@@ -131,7 +199,7 @@ IF EXISTS (SELECT 1
 
 GO
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE SCOPED CONFIGURATION SET MAXDOP = 0;
@@ -147,13 +215,18 @@ IF EXISTS (SELECT 1
 
 GO
 IF EXISTS (SELECT 1
-           FROM   [sys].[databases]
+           FROM   [master].[dbo].[sysdatabases]
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
             SET TEMPORAL_HISTORY_RETENTION ON 
             WITH ROLLBACK IMMEDIATE;
     END
+
+
+GO
+IF fulltextserviceproperty(N'IsFulltextInstalled') = 1
+    EXECUTE sp_fulltext_database 'enable';
 
 
 GO
@@ -203,6 +276,12 @@ IF (@VarDecimalSupported > 0)
     BEGIN
         EXECUTE sp_db_vardecimal_storage_format N'$(DatabaseName)', 'ON';
     END
+
+
+GO
+ALTER DATABASE [$(DatabaseName)]
+    SET MULTI_USER 
+    WITH ROLLBACK IMMEDIATE;
 
 
 GO
