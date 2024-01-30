@@ -3,5 +3,9 @@
   <PropertyGroup>
     <StartupScript>(Blank)</StartupScript>
     <StartAction>StartNone</StartAction>
+    <BlockOnPossibleDataLoss>True</BlockOnPossibleDataLoss>
+    <AllowIncompatiblePlatform>True</AllowIncompatiblePlatform>
+    <DeployDatabaseInSingleUserMode>True</DeployDatabaseInSingleUserMode>
+    <BackupDatabaseBeforeChanges>True</BackupDatabaseBeforeChanges>
   </PropertyGroup>
 </Project>
