@@ -68,13 +68,13 @@ IF EXISTS (SELECT 1
            WHERE  [name] = N'$(DatabaseName)')
     BEGIN
         ALTER DATABASE [$(DatabaseName)]
-            SET ANSI_NULLS OFF,
-                ANSI_PADDING OFF,
-                ANSI_WARNINGS OFF,
-                ARITHABORT OFF,
-                CONCAT_NULL_YIELDS_NULL OFF,
-                NUMERIC_ROUNDABORT OFF,
-                QUOTED_IDENTIFIER OFF,
+            SET ANSI_NULLS ON,
+                ANSI_PADDING ON,
+                ANSI_WARNINGS ON,
+                ARITHABORT ON,
+                CONCAT_NULL_YIELDS_NULL ON,
+                NUMERIC_ROUNDABORT ON,
+                QUOTED_IDENTIFIER ON,
                 ANSI_NULL_DEFAULT OFF,
                 CURSOR_CLOSE_ON_COMMIT OFF,
                 AUTO_CREATE_STATISTICS ON,
