@@ -1,0 +1,10 @@
+D:\MIGRATION2\Database1\bin\Debug\Database1.dacpac
+D:\MIGRATION2\Database1\bin\Debug\Database1.dll
+D:\MIGRATION2\Database1\bin\Debug\Database1.pdb
+D:\MIGRATION2\Database1\obj\Debug\Database1.sqlproj.AssemblyReference.cache
+D:\MIGRATION2\Database1\obj\Debug\Model.xml
+D:\MIGRATION2\Database1\obj\Debug\refactor.xml
+D:\MIGRATION2\Database1\obj\Debug\postdeploy.sql
+D:\MIGRATION2\Database1\obj\Debug\predeploy.sql
+D:\MIGRATION2\Database1\obj\Debug\Database1.dll
+D:\MIGRATION2\Database1\obj\Debug\Database1.pdb
